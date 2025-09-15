@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import ai.bridgee.android.sdk.internal.api.MatchApiClient;
+import ai.bridgee.android.sdk.internal.api.InstallRefererResolver;
 import ai.bridgee.android.sdk.internal.model.MatchRequest;
 import ai.bridgee.android.sdk.internal.model.MatchResponse;
 import ai.bridgee.android.sdk.internal.util.TenantTokenEncoder;
@@ -24,6 +25,7 @@ public class BridgeeSDK {
     private final AnalyticsProvider analyticsProvider;
     private final MatchApiClient matchApiClient;
     private final Context context;
+    private final InstallRefererResolver instalRefererResolver;
     private Boolean dryRun = true;
 
     private static BridgeeSDK instance;
@@ -59,6 +61,8 @@ public class BridgeeSDK {
                 return;
             }
 
+            resolveBfpid(matchBundle);
+
             match(matchBundle.toBundle(), new MatchCallback<MatchResponse>() {
                 @Override
                 public void onSuccess(MatchResponse response) {
@@ -85,6 +89,20 @@ public class BridgeeSDK {
 
     /****** PRIVATE METHODS *******/
 
+    private void resolveBfpid(MatchBundle matchBundle) {
+        instalRefererResolver.resolveBfpid(new InstallRefererResolver.BfpidCallback() {
+            @Override
+            public void onBfpidResolved(String bfpid) {
+                if (bfpid != null && !bfpid.trim().isEmpty()) {
+                    matchBundle.withCustomParam("bfpid", bfpid);
+                    Log.d(TAG, "bfpid resolved and added to match bundle: " + bfpid);
+                } else {
+                    Log.d(TAG, "No bfpid found in install referrer");
+                }
+            }
+        });
+    }
+
     private BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
@@ -102,6 +120,7 @@ public class BridgeeSDK {
         this.context = context.getApplicationContext();
         this.analyticsProvider = provider;
         this.matchApiClient = MatchApiClient.getInstance(this.context, tenantId, tenantKey);
+        this.instalRefererResolver = new InstallRefererResolver(this.context);
         this.dryRun = dryRun;
     }
 

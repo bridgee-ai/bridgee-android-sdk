@@ -3,7 +3,7 @@
 echo "🎯 Criando bundle para Maven Central via Sonatype Central Portal"
 
 # Definir variáveis
-VERSION="1.0.0"
+VERSION="1.0.1"
 ARTIFACT_ID="bridgee-android-sdk"
 GROUP_ID="ai.bridgee"
 GROUP_PATH="ai/bridgee"
