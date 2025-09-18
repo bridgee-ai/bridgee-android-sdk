@@ -3,7 +3,7 @@
 echo "🎯 Criando bundle para Maven Central via Sonatype Central Portal"
 
 # Definir variáveis
-VERSION="1.0.1"
+VERSION="1.0.2"
 ARTIFACT_ID="bridgee-android-sdk"
 GROUP_ID="ai.bridgee"
 GROUP_PATH="ai/bridgee"
@@ -102,6 +102,11 @@ cat > "$MAVEN_DIR/${ARTIFACT_ID}-${VERSION}.pom" << EOF
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.android.installreferrer</groupId>
+            <artifactId>installreferrer</artifactId>
+            <version>2.2</version>
         </dependency>
     </dependencies>
 </project>
