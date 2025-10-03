@@ -1,22 +1,48 @@
 #!/bin/bash
 
-echo "🎯 Criando bundle para Maven Central via Sonatype Central Portal"
+# Verificar parâmetro
+MODE=$1
+
+if [ -z "$MODE" ]; then
+    echo "❌ Erro: Parâmetro obrigatório não fornecido"
+    echo ""
+    echo "Uso: ./create-bundle.sh [MODE]"
+    echo ""
+    echo "Modos disponíveis:"
+    echo "  build  - Apenas compila o projeto para verificar se tudo está OK"
+    echo "  local  - Compila e publica no repositório Maven local (~/.m2/repository)"
+    echo "  zip    - Compila e cria bundle ZIP para upload no Maven Central Portal"
+    echo ""
+    echo "Exemplo: ./create-bundle.sh zip"
+    exit 1
+fi
+
+if [ "$MODE" != "build" ] && [ "$MODE" != "local" ] && [ "$MODE" != "zip" ]; then
+    echo "❌ Erro: Modo inválido '$MODE'"
+    echo ""
+    echo "Modos válidos: build, local, zip"
+    exit 1
+fi
+
+echo "🎯 Modo selecionado: $MODE"
 
 # Definir variáveis
-VERSION="1.0.2"
+VERSION="2.0.0"
 ARTIFACT_ID="bridgee-android-sdk"
 GROUP_ID="ai.bridgee"
 GROUP_PATH="ai/bridgee"
 
-# Verificar chave GPG
-KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | head -1 | sed 's/.*\/\([A-F0-9]*\) .*/\1/')
+# Verificar chave GPG apenas para modo zip
+if [ "$MODE" = "zip" ]; then
+    KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | head -1 | sed 's/.*\/\([A-F0-9]*\) .*/\1/')
 
-if [ -z "$KEY_ID" ]; then
-    echo "❌ Chave GPG não encontrada. Execute 'gpg --gen-key' primeiro."
-    exit 1
+    if [ -z "$KEY_ID" ]; then
+        echo "❌ Chave GPG não encontrada. Execute 'gpg --gen-key' primeiro."
+        exit 1
+    fi
+
+    echo "🔑 Usando chave GPG: $KEY_ID"
 fi
-
-echo "🔑 Usando chave GPG: $KEY_ID"
 
 # Clean build
 echo "🧹 Limpando build anterior..."
@@ -32,12 +58,51 @@ if [ ! -f "./bridgeesdk/build/outputs/aar/bridgeesdk-release.aar" ]; then
     exit 1
 fi
 
-# Criar estrutura Maven
+# Se modo for apenas build, finalizar aqui
+if [ "$MODE" = "build" ]; then
+    echo ""
+    echo "=========================================="
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO!"
+    echo "=========================================="
+    echo "📦 AAR gerado: ./bridgeesdk/build/outputs/aar/bridgeesdk-release.aar"
+    echo ""
+    exit 0
+fi
+
+# Se modo for local, publicar no Maven local
+if [ "$MODE" = "local" ]; then
+    echo "📦 Publicando no Maven local..."
+    ./gradlew publishToMavenLocal
+    
+    echo ""
+    echo "=========================================="
+    echo "✅ PUBLICADO NO MAVEN LOCAL!"
+    echo "=========================================="
+    echo "📁 Localização: ~/.m2/repository/$GROUP_PATH/$ARTIFACT_ID/$VERSION/"
+    echo ""
+    echo "Para usar no seu projeto, adicione ao build.gradle:"
+    echo ""
+    echo "repositories {"
+    echo "    mavenLocal()"
+    echo "}"
+    echo ""
+    echo "dependencies {"
+    echo "    implementation '$GROUP_ID:$ARTIFACT_ID:$VERSION'"
+    echo "}"
+    echo "=========================================="
+    echo ""
+    exit 0
+fi
+
+# ========================================
+# MODO ZIP - Criar bundle para Maven Central
+# ========================================
+
 BUNDLE_DIR="./bundle-temp"
 MAVEN_DIR="$BUNDLE_DIR/$GROUP_PATH/$ARTIFACT_ID/$VERSION"
 mkdir -p "$MAVEN_DIR"
 
-echo "📦 Preparando artefatos..."
+echo "📦 Preparando artefatos para bundle ZIP..."
 
 # 1. Copiar AAR
 cp "./bridgeesdk/build/outputs/aar/bridgeesdk-release.aar" "$MAVEN_DIR/${ARTIFACT_ID}-${VERSION}.aar"

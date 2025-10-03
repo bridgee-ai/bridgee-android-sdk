@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import ai.bridgee.android.sdk.internal.api.MatchApiClient;
-import ai.bridgee.android.sdk.internal.api.InstallRefererResolver;
+import ai.bridgee.android.sdk.internal.api.InstallReferrerResolver;
 import ai.bridgee.android.sdk.internal.model.MatchRequest;
 import ai.bridgee.android.sdk.internal.model.MatchResponse;
 import ai.bridgee.android.sdk.internal.util.TenantTokenEncoder;
@@ -25,7 +25,7 @@ public class BridgeeSDK {
     private final AnalyticsProvider analyticsProvider;
     private final MatchApiClient matchApiClient;
     private final Context context;
-    private final InstallRefererResolver instalRefererResolver;
+    private final InstallReferrerResolver instalReferrerResolver;
     private Boolean dryRun = true;
 
     private static BridgeeSDK instance;
@@ -49,35 +49,49 @@ public class BridgeeSDK {
     }
 
     /**
+     * This method will log a campaign details event into your analytics provider, but before that it will try to match
+     * the given matchParameters with Bridgee-API. We want to inject in this event the UTM attribution parameters.
+     * @param matchBundle Additional parameters to be matched - wich more parameters you provide, more accurate the match will be.
+     */
+    public void logCampaignDetailsEvent(MatchBundle matchBundle) {
+        logCustomEvent("campaign_details", new Bundle(), matchBundle);
+    }
+
+    /**
      * This method will log an event into your analytics provider, but before that it will try to match
      * the given parameters with Bridgee-API. We want to inject in this event the UTM attribution parameters.
      * @param eventName The name of the event to be logged.
      * @param matchParams Additional parameters to be matched - wich more parameters you provide, more accurate the match will be.
      */
-    public void logEvent(String eventName, Bundle eventParams, MatchBundle matchBundle) {
+    public void logCustomEvent(String eventName, Bundle eventParams, MatchBundle matchBundle) {
         try {
             if (eventName == null || eventName.trim().isEmpty()) {
                 Log.w(TAG, "Event name cannot be null or empty");
                 return;
             }
 
-            resolveBfpid(matchBundle);
-
-            match(matchBundle.toBundle(), new MatchCallback<MatchResponse>() {
+            // First resolve install referrer, then make the match call
+            resolveInstallReferrer(matchBundle, new Runnable() {
                 @Override
-                public void onSuccess(MatchResponse response) {
-                    Log.d(TAG, "Dry run: " + eventName + " >> " + response.toBundle());
-                    if (!dryRun) {
-                        eventParams.putAll(response.toBundle());
-                        analyticsProvider.logEvent(eventName, eventParams);
-                    }
-                }
+                public void run() {
+                    // Only call match after install referrer is resolved
+                    match(matchBundle.toBundle(), new MatchCallback<MatchResponse>() {
+                        @Override
+                        public void onSuccess(MatchResponse response) {
+                            Log.d(TAG, "Dry run: " + eventName + " >> " + dryRun + " >> " + response.toBundle());
+                            if (!dryRun) {
+                                eventParams.putAll(response.toBundle());
+                                analyticsProvider.logEvent(eventName, eventParams);
+                            }
+                        }
 
-                @Override
-                public void onError(String error) {
-                    // we garantee that if something goes wrong, we will not throw
-                    // an exception and eventually break the app experience
-                    Log.e(TAG, "error to log event: " + error);
+                        @Override
+                        public void onError(String error) {
+                            // we garantee that if something goes wrong, we will not throw
+                            // an exception and eventually break the app experience
+                            Log.e(TAG, "error to log event: " + error);
+                        }
+                    });
                 }
             });
         } catch (Exception e) {
@@ -89,15 +103,22 @@ public class BridgeeSDK {
 
     /****** PRIVATE METHODS *******/
 
-    private void resolveBfpid(MatchBundle matchBundle) {
-        instalRefererResolver.resolveBfpid(new InstallRefererResolver.BfpidCallback() {
+    private void resolveInstallReferrer(MatchBundle matchBundle, Runnable onComplete) {
+        instalReferrerResolver.resolve(new InstallReferrerResolver.ResolveCallback() {
             @Override
-            public void onBfpidResolved(String bfpid) {
-                if (bfpid != null && !bfpid.trim().isEmpty()) {
-                    matchBundle.withCustomParam("bfpid", bfpid);
-                    Log.d(TAG, "bfpid resolved and added to match bundle: " + bfpid);
-                } else {
-                    Log.d(TAG, "No bfpid found in install referrer");
+            public void onResolve(String installReferrer) {
+                if (installReferrer != null && !installReferrer.trim().isEmpty()) {
+                    matchBundle.withCustomParam("install_referrer", installReferrer);
+                    Log.d(TAG, "install referrer resolved and added to match bundle: " + installReferrer);
+                } 
+                else {
+                    matchBundle.withCustomParam("install_referrer", "error:not_found");
+                    Log.d(TAG, "No install referrer found");
+                }
+                
+                // Execute the callback after install referrer is resolved
+                if (onComplete != null) {
+                    onComplete.run();
                 }
             }
         });
@@ -120,7 +141,7 @@ public class BridgeeSDK {
         this.context = context.getApplicationContext();
         this.analyticsProvider = provider;
         this.matchApiClient = MatchApiClient.getInstance(this.context, tenantId, tenantKey);
-        this.instalRefererResolver = new InstallRefererResolver(this.context);
+        this.instalReferrerResolver = new InstallReferrerResolver(this.context);
         this.dryRun = dryRun;
     }
 

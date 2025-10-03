@@ -12,15 +12,14 @@ import com.android.installreferrer.api.ReferrerDetails;
 /**
  * Resolver for extracting bfpid from Google Play Install Referrer API
  */
-public class InstallRefererResolver {
+public class InstallReferrerResolver {
     
-    private static final String TAG = "InstallRefererResolver";
-    private static final String BFPID_PARAM = "bfpid";
+    private static final String TAG = "InstallReferrerResolver";
     
     private final Context context;
     private InstallReferrerClient referrerClient;
     
-    public InstallRefererResolver(Context context) {
+    public InstallReferrerResolver(Context context) {
         this.context = context.getApplicationContext();
     }
     
@@ -28,7 +27,7 @@ public class InstallRefererResolver {
      * Resolves the bfpid parameter from the install referrer URL
      * @param callback Callback to receive the bfpid value or null if not found
      */
-    public void resolveBfpid(BfpidCallback callback) {
+    public void resolve(ResolveCallback callback) {
         if (referrerClient != null) {
             referrerClient.endConnection();
         }
@@ -43,26 +42,29 @@ public class InstallRefererResolver {
                         try {
                             ReferrerDetails response = referrerClient.getInstallReferrer();
                             String referrerUrl = response.getInstallReferrer();
-                            String bfpid = extractBfpidFromUrl(referrerUrl);
-                            callback.onBfpidResolved(bfpid);
-                        } catch (RemoteException e) {
+                            if (referrerUrl == null || referrerUrl.trim().isEmpty())
+                                callback.onResolve("error:empty");
+                            else
+                                callback.onResolve("success:" + referrerUrl);
+                        } 
+                        catch (RemoteException e) {
                             Log.e(TAG, "RemoteException getting install referrer", e);
-                            callback.onBfpidResolved(null);
+                            callback.onResolve("error:" + e.getMessage());
                         } finally {
                             referrerClient.endConnection();
                         }
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         Log.w(TAG, "Install Referrer API not supported");
-                        callback.onBfpidResolved(null);
+                        callback.onResolve("error:not_supported");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
                         Log.w(TAG, "Install Referrer service unavailable");
-                        callback.onBfpidResolved(null);
+                        callback.onResolve("error:service_unavailable");
                         break;
                     default:
                         Log.w(TAG, "Install Referrer setup failed with code: " + responseCode);
-                        callback.onBfpidResolved(null);
+                        callback.onResolve("error:setup_failed");
                         break;
                 }
             }
@@ -70,43 +72,15 @@ public class InstallRefererResolver {
             @Override
             public void onInstallReferrerServiceDisconnected() {
                 Log.d(TAG, "Install Referrer service disconnected");
-                callback.onBfpidResolved(null);
+                callback.onResolve("error:service_disconnected");
             }
         });
     }
     
     /**
-     * Extracts bfpid parameter from the referrer URL
-     * @param referrerUrl The install referrer URL
-     * @return The bfpid value or null if not found
-     */
-    private String extractBfpidFromUrl(String referrerUrl) {
-        if (referrerUrl == null || referrerUrl.trim().isEmpty()) {
-            Log.d(TAG, "Referrer URL is null or empty");
-            return null;
-        }
-        
-        try {
-            Uri uri = Uri.parse(referrerUrl);
-            String bfpid = uri.getQueryParameter(BFPID_PARAM);
-            
-            if (bfpid != null && !bfpid.trim().isEmpty()) {
-                Log.d(TAG, "Found bfpid: " + bfpid);
-                return bfpid;
-            } else {
-                Log.d(TAG, "bfpid parameter not found in referrer URL: " + referrerUrl);
-                return null;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error parsing referrer URL: " + referrerUrl, e);
-            return null;
-        }
-    }
-    
-    /**
      * Callback interface for bfpid resolution
      */
-    public interface BfpidCallback {
-        void onBfpidResolved(String bfpid);
+    public interface ResolveCallback {
+        void onResolve(String result);
     }
 }

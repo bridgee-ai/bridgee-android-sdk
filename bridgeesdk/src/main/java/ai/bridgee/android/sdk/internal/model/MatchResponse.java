@@ -19,9 +19,18 @@ public class MatchResponse {
 
     public Bundle toBundle() {
         Bundle bundle = new Bundle();
-        if (utmSource != null) bundle.putString("utm_source", utmSource);
-        if (utmMedium != null) bundle.putString("utm_medium", utmMedium);
-        if (utmCampaign != null) bundle.putString("utm_campaign", utmCampaign);
+        if (utmSource != null) { 
+            bundle.putString("utm_source", utmSource); 
+            bundle.putString("source", utmSource); 
+        }
+        if (utmMedium != null) { 
+            bundle.putString("utm_medium", utmMedium); 
+            bundle.putString("medium", utmMedium); 
+        }
+        if (utmCampaign != null) { 
+            bundle.putString("utm_campaign", utmCampaign); 
+            bundle.putString("campaign", utmCampaign); 
+        }
         return bundle;
     }
 }
