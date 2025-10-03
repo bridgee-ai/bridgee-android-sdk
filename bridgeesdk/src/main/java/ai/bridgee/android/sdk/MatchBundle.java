@@ -15,6 +15,10 @@ public class MatchBundle {
         params = new Bundle();
     }
 
+    public MatchBundle(Bundle bundle) {
+        params = bundle;
+    }
+
     public MatchBundle withCustomParam(String key, String value) {
         params.putString(key, value);
         return this;

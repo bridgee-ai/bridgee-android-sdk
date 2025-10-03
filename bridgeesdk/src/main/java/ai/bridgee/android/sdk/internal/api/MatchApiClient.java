@@ -34,32 +34,20 @@ public class MatchApiClient {
     private static final int CONNECTION_TIMEOUT_MS = 500; // 0.5 segundos
     private static final int READ_TIMEOUT_MS = 1500; // 1.5 segundos
     
-    private static MatchApiClient instance;
     private final Gson gson;
     private final ExecutorService executorService;
     private final Handler mainHandler;
     private final Context context;
-    private String tenantId;
-    private String tenantKey;
+    private final String tenantId;
+    private final String tenantKey;
 
-    private void setTenantCredentials(String id, String key) {
-        this.tenantId = id;
-        this.tenantKey = key;
-    }
-
-    private MatchApiClient(Context context, String id, String key) {
+    public MatchApiClient(Context context, String tenantId, String tenantKey) {
         this.context = context.getApplicationContext();
+        this.tenantId = tenantId;
+        this.tenantKey = tenantKey;
         this.gson = new GsonBuilder().create();
         this.executorService = Executors.newSingleThreadExecutor();
         this.mainHandler = new Handler(Looper.getMainLooper());
-        this.setTenantCredentials(id, key);
-    }
-
-    public static synchronized MatchApiClient getInstance(Context context, String id, String key) {
-        if (instance == null) {
-            instance = new MatchApiClient(context, id, key);
-        }
-        return instance;
     }
 
     private boolean isNetworkAvailable() {
@@ -166,6 +154,16 @@ public class MatchApiClient {
     private void notifyError(MatchCallback<?> callback, String error) {
         if (callback != null) {
             mainHandler.post(() -> callback.onError(error));
+        }
+    }
+
+    /**
+     * Cleanup method to shutdown the executor service
+     * Should be called when this client instance is no longer needed
+     */
+    public void shutdown() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
         }
     }
 

@@ -17,7 +17,6 @@ public class InstallReferrerResolver {
     private static final String TAG = "InstallReferrerResolver";
     
     private final Context context;
-    private InstallReferrerClient referrerClient;
     
     public InstallReferrerResolver(Context context) {
         this.context = context.getApplicationContext();
@@ -28,11 +27,8 @@ public class InstallReferrerResolver {
      * @param callback Callback to receive the bfpid value or null if not found
      */
     public void resolve(ResolveCallback callback) {
-        if (referrerClient != null) {
-            referrerClient.endConnection();
-        }
-        
-        referrerClient = InstallReferrerClient.newBuilder(context).build();
+        // Create a new client instance for each resolve call
+        InstallReferrerClient referrerClient = InstallReferrerClient.newBuilder(context).build();
         
         referrerClient.startConnection(new InstallReferrerStateListener() {
             @Override

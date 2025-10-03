@@ -23,9 +23,10 @@ public class BridgeeSDK {
 
     private static final String TAG = "BRIDGEE-SDK";
     private final AnalyticsProvider analyticsProvider;
-    private final MatchApiClient matchApiClient;
     private final Context context;
     private final InstallReferrerResolver instalReferrerResolver;
+    private final String tenantId;
+    private final String tenantKey;
     private Boolean dryRun = true;
 
     private static BridgeeSDK instance;
@@ -60,15 +61,19 @@ public class BridgeeSDK {
     /**
      * This method will log an event into your analytics provider, but before that it will try to match
      * the given parameters with Bridgee-API. We want to inject in this event the UTM attribution parameters.
-     * @param eventName The name of the event to be logged.
      * @param matchParams Additional parameters to be matched - wich more parameters you provide, more accurate the match will be.
      */
-    public void logCustomEvent(String eventName, Bundle eventParams, MatchBundle matchBundle) {
+    public void logCustomEvent(String eventName, Bundle ep, MatchBundle mb) {
         try {
+            Bundle eventParams = cloneBundle(ep);
+            MatchBundle matchBundle = cloneMatchBundle(mb);
+
             if (eventName == null || eventName.trim().isEmpty()) {
                 Log.w(TAG, "Event name cannot be null or empty");
                 return;
             }
+
+            matchBundle.withCustomParam("event_name", eventName);
 
             // First resolve install referrer, then make the match call
             resolveInstallReferrer(matchBundle, new Runnable() {
@@ -94,10 +99,9 @@ public class BridgeeSDK {
                     });
                 }
             });
-        } catch (Exception e) {
-            // we garantee that if something goes wrong, we will not throw
-            // an exception and eventually break the app experience
-            Log.e(TAG, "error to log event: " + e.getMessage(), e);
+        }
+        catch (Exception e) {
+            Log.e(TAG, "error to log event: " + eventName + " >> " + e.getMessage());
         }
     }
 
@@ -124,6 +128,17 @@ public class BridgeeSDK {
         });
     }
 
+    private Bundle cloneBundle(Bundle bundle) {
+        Bundle clone = new Bundle();
+        clone.putAll(bundle);
+        return clone;
+    }
+
+    private MatchBundle cloneMatchBundle(MatchBundle matchBundle) {
+        Bundle clone = cloneBundle(matchBundle.toBundle());
+        return new MatchBundle(clone);
+    }
+
     private BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
@@ -140,7 +155,8 @@ public class BridgeeSDK {
         
         this.context = context.getApplicationContext();
         this.analyticsProvider = provider;
-        this.matchApiClient = MatchApiClient.getInstance(this.context, tenantId, tenantKey);
+        this.tenantId = tenantId;
+        this.tenantKey = tenantKey;
         this.instalReferrerResolver = new InstallReferrerResolver(this.context);
         this.dryRun = dryRun;
     }
@@ -152,6 +168,9 @@ public class BridgeeSDK {
         if (callback == null) {
             throw new IllegalArgumentException("MatchCallback cannot be null");
         }
+
+        // Create a new MatchApiClient instance for each call to avoid singleton issues
+        MatchApiClient matchApiClient = new MatchApiClient(context, tenantId, tenantKey);
 
         MatchApiClient.MatchCallback<JSONObject> apiCallback = new MatchApiClient.MatchCallback<JSONObject>() {
             @Override
@@ -167,6 +186,9 @@ public class BridgeeSDK {
                 } catch (Exception e) {
                     Log.e(TAG, "Error processing response: " + e.getMessage(), e);
                     callback.onError("Error processing response from server");
+                } finally {
+                    // Cleanup the client after use
+                    matchApiClient.shutdown();
                 }
             }
 
@@ -174,6 +196,8 @@ public class BridgeeSDK {
             public void onError(String error) {
                 Log.e(TAG, "Error in API call: " + error);
                 callback.onError(error);
+                // Cleanup the client after error
+                matchApiClient.shutdown();
             }
         };
         
