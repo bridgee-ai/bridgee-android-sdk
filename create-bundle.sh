@@ -27,7 +27,7 @@ fi
 echo "🎯 Modo selecionado: $MODE"
 
 # Definir variáveis
-VERSION="2.0.1"
+VERSION="2.1.0"
 ARTIFACT_ID="bridgee-android-sdk"
 GROUP_ID="ai.bridgee"
 GROUP_PATH="ai/bridgee"

@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import org.json.JSONObject;
 import org.json.JSONException;
+import ai.bridgee.android.sdk.internal.util.ResponseCallback;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -36,7 +37,6 @@ public class MatchApiClient {
     
     private final Gson gson;
     private final ExecutorService executorService;
-    private final Handler mainHandler;
     private final Context context;
     private final String tenantId;
     private final String tenantKey;
@@ -47,7 +47,6 @@ public class MatchApiClient {
         this.tenantKey = tenantKey;
         this.gson = new GsonBuilder().create();
         this.executorService = Executors.newSingleThreadExecutor();
-        this.mainHandler = new Handler(Looper.getMainLooper());
     }
 
     private boolean isNetworkAvailable() {
@@ -71,12 +70,9 @@ public class MatchApiClient {
         }
     }
 
-    public void match(
-        android.os.Bundle bundle,
-        final MatchCallback<JSONObject> callback
-    ) {
+    public void match(android.os.Bundle bundle, ResponseCallback<JSONObject> callback) {
         if (!isNetworkAvailable()) {
-            notifyError(callback, "Sem conexão com a internet");
+            callback.error(new Exception("without internet connection"));
             return;
         }
 
@@ -96,15 +92,8 @@ public class MatchApiClient {
                 urlConnection.setReadTimeout(READ_TIMEOUT_MS);
                 urlConnection.setDoOutput(true);
                 
-                if (tenantId != null && tenantKey != null) {
-                    try {
-                        String token = TenantTokenEncoder.encodeToken(tenantId, tenantKey);
-                        urlConnection.setRequestProperty("x-tenant-token", token);
-                        Log.d(TAG, "Added x-tenant header to request");
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to generate x-tenant token", e);
-                    }
-                }
+                String token = TenantTokenEncoder.encodeToken(tenantId, tenantKey);
+                urlConnection.setRequestProperty("x-tenant-token", token);
                 
                 try (DataOutputStream wr = new DataOutputStream(urlConnection.getOutputStream())) {
                     byte[] input = json.getBytes(StandardCharsets.UTF_8);
@@ -129,32 +118,22 @@ public class MatchApiClient {
                 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     JSONObject jsonResponse = new JSONObject(response.toString());
-                    notifySuccess(callback, jsonResponse);
-                } else {
+                    callback.ok(jsonResponse);
+                } 
+                else {
                     String errorMsg = "Error from server: " + responseCode + " - " + response.toString();
-                    notifyError(callback, errorMsg);
+                    callback.error(new Exception(errorMsg));
                 }
                 
-            } catch (Exception e) {
-                notifyError(callback, e.getMessage());
-            } finally {
-                if (urlConnection != null) {
+            } 
+            catch (Exception e) {
+                callback.error(e);
+            } 
+            finally {
+                if (urlConnection != null) 
                     urlConnection.disconnect();
-                }
             }
         });
-    }
-
-    private void notifySuccess(MatchCallback<JSONObject> callback, JSONObject response) {
-        if (callback != null) {
-            mainHandler.post(() -> callback.onSuccess(response));
-        }
-    }
-
-    private void notifyError(MatchCallback<?> callback, String error) {
-        if (callback != null) {
-            mainHandler.post(() -> callback.onError(error));
-        }
     }
 
     /**
@@ -165,10 +144,5 @@ public class MatchApiClient {
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
         }
-    }
-
-    public interface MatchCallback<T> {
-        void onSuccess(T response);
-        void onError(String error);
     }
 }

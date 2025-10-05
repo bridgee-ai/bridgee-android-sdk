@@ -9,6 +9,7 @@ import ai.bridgee.android.sdk.internal.api.InstallReferrerResolver;
 import ai.bridgee.android.sdk.internal.model.MatchRequest;
 import ai.bridgee.android.sdk.internal.model.MatchResponse;
 import ai.bridgee.android.sdk.internal.util.TenantTokenEncoder;
+import ai.bridgee.android.sdk.internal.util.ResponseCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -31,6 +32,9 @@ public class BridgeeSDK {
 
     private static BridgeeSDK instance;
 
+    private static final String FIRST_OPEN_EVENT_NAME = "first_open";
+    private static final String CAMPAIGN_DETAILS_EVENT_NAME = "campaign_details";
+
     /****** PUBLIC METHODS *******/
 
     /**
@@ -50,82 +54,71 @@ public class BridgeeSDK {
     }
 
     /**
-     * This method will log a campaign details event into your analytics provider, but before that it will try to match
-     * the given matchParameters with Bridgee-API. We want to inject in this event the UTM attribution parameters.
-     * @param matchBundle Additional parameters to be matched - wich more parameters you provide, more accurate the match will be.
+     * Register some user attributes and events to firebase so we vinculate the installment to the right channel.
+     * 
+     * @param mb user data that you can send to help us match the user with the right attribution event.
+     * the more data you provide, the more accurate the match will be.
      */
-    public void logCampaignDetailsEvent(MatchBundle matchBundle) {
-        logCustomEvent("campaign_details", new Bundle(), matchBundle);
-    }
+    public void firstOpen(MatchBundle mb) {
+        MatchBundle matchBundle = cloneMatchBundle(mb);
+        matchBundle.withCustomParam("event_name", FIRST_OPEN_EVENT_NAME);
 
-    /**
-     * This method will log an event into your analytics provider, but before that it will try to match
-     * the given parameters with Bridgee-API. We want to inject in this event the UTM attribution parameters.
-     * @param matchParams Additional parameters to be matched - wich more parameters you provide, more accurate the match will be.
-     */
-    public void logCustomEvent(String eventName, Bundle ep, MatchBundle mb) {
-        try {
-            Bundle eventParams = cloneBundle(ep);
-            MatchBundle matchBundle = cloneMatchBundle(mb);
+        resolveAttribution(matchBundle, new ResponseCallback<MatchResponse>() {
+            @Override
+            public void ok(MatchResponse matchResponse) {
+                Log.d(TAG, "Attribution resolved: " + matchResponse);
 
-            if (eventName == null || eventName.trim().isEmpty()) {
-                Log.w(TAG, "Event name cannot be null or empty");
-                return;
+                // user properties
+                Log.d(TAG, "Setting user properties");
+                setUserProperty("install_source", matchResponse.getUtmSource());
+                setUserProperty("install_medium", matchResponse.getUtmMedium());
+                setUserProperty("install_campaign", matchResponse.getUtmCampaign());            
+
+                // custom events
+                Log.d(TAG, "Logging custom events");
+                logEvent(tenantId + "_" + FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
+                logEvent(tenantId + "_" + CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
+
+                // reserved events
+                Log.d(TAG, "Logging reserved events");
+                logEvent(FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
+                logEvent(CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
             }
 
-            matchBundle.withCustomParam("event_name", eventName);
-
-            // First resolve install referrer, then make the match call
-            resolveInstallReferrer(matchBundle, new Runnable() {
-                @Override
-                public void run() {
-                    // Only call match after install referrer is resolved
-                    match(matchBundle.toBundle(), new MatchCallback<MatchResponse>() {
-                        @Override
-                        public void onSuccess(MatchResponse response) {
-                            Log.d(TAG, "Dry run: " + eventName + " >> " + dryRun + " >> " + response.toBundle());
-                            if (!dryRun) {
-                                eventParams.putAll(response.toBundle());
-                                analyticsProvider.logEvent(eventName, eventParams);
-                            }
-                        }
-
-                        @Override
-                        public void onError(String error) {
-                            // we garantee that if something goes wrong, we will not throw
-                            // an exception and eventually break the app experience
-                            Log.e(TAG, "error to log event: " + error);
-                        }
-                    });
-                }
-            });
-        }
-        catch (Exception e) {
-            Log.e(TAG, "error to log event: " + eventName + " >> " + e.getMessage());
-        }
+            @Override
+            public void error(Exception e) {
+                Log.e(TAG, "Failed to resolve attribution: " + e.getMessage());
+            }
+        });
+        
     }
 
     /****** PRIVATE METHODS *******/
 
-    private void resolveInstallReferrer(MatchBundle matchBundle, Runnable onComplete) {
-        instalReferrerResolver.resolve(new InstallReferrerResolver.ResolveCallback() {
-            @Override
-            public void onResolve(String installReferrer) {
-                if (installReferrer != null && !installReferrer.trim().isEmpty()) {
-                    matchBundle.withCustomParam("install_referrer", installReferrer);
-                    Log.d(TAG, "install referrer resolved and added to match bundle: " + installReferrer);
-                } 
-                else {
-                    matchBundle.withCustomParam("install_referrer", "error:not_found");
-                    Log.d(TAG, "No install referrer found");
-                }
-                
-                // Execute the callback after install referrer is resolved
-                if (onComplete != null) {
-                    onComplete.run();
-                }
+    private void setUserProperty(String name, String value) {
+        Log.d(TAG, "Setting user property: " + name + " >> " + value);
+        if (!dryRun) {
+            try {
+                name = name.replace("-", "_");
+                analyticsProvider.setUserProperty(name, value);
             }
-        });
+            catch (Exception e) {
+                Log.e(TAG, "Failed to set user property: " + name + " >> " + value, e);
+            }
+        }
+    }
+    
+    private void logEvent(String name, Bundle params) {
+        Log.d(TAG, "Logging event: " + name + " >> " + params);
+        if (!dryRun) {
+            try {
+                name = name.replace("-", "_");
+                analyticsProvider.logEvent(name, params);
+            }
+            catch (Exception e) {
+                Log.e(TAG, "Failed to log event: " + name + " >> " + params, e);
+            }        
+        }
     }
 
     private Bundle cloneBundle(Bundle bundle) {
@@ -161,51 +154,87 @@ public class BridgeeSDK {
         this.dryRun = dryRun;
     }
 
-    private <T extends MatchResponse> void match(Bundle searchBundle, final MatchCallback<T> callback) {
-        if (searchBundle == null) {
-            throw new IllegalArgumentException("SearchParams cannot be null");
-        }
-        if (callback == null) {
-            throw new IllegalArgumentException("MatchCallback cannot be null");
-        }
+    private void resolveAttribution(MatchBundle matchBundle, ResponseCallback<MatchResponse> callback) {
+        resolveInstallReferrer(new ResponseCallback<String>() {
+            @Override
+            public void ok(String installReferrer) {
+                
+                matchBundle.withCustomParam("install_referrer", installReferrer);
 
+                resolveMatch(matchBundle, new ResponseCallback<MatchResponse>() {
+                    @Override
+                    public void ok(MatchResponse matchResponse) {
+                        Log.d(TAG, "Match resolved: " + matchResponse);
+                        callback.ok(matchResponse);
+                    }
+
+                    @Override
+                    public void error(Exception e) {
+                        Log.e(TAG, "Failed to resolve match: " + e.getMessage());
+                        callback.error(e);
+                    }
+                });
+            }
+
+            @Override
+            public void error(Exception e) {
+                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                callback.error(e);
+            }
+        });
+    }
+
+    private void resolveInstallReferrer(ResponseCallback<String> callback) {
+        instalReferrerResolver.resolve(new ResponseCallback<String>() {
+            @Override
+            public void ok(String installReferrer) {              
+                Log.d(TAG, "Install referrer resolved: " + installReferrer);
+                callback.ok(installReferrer);
+            }
+
+            @Override
+            public void error(Exception e) {
+                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                callback.error(e);
+            }
+        });
+    }
+
+    private <T extends MatchResponse> void resolveMatch(MatchBundle matchBundle, ResponseCallback<MatchResponse> callback) {
         // Create a new MatchApiClient instance for each call to avoid singleton issues
         MatchApiClient matchApiClient = new MatchApiClient(context, tenantId, tenantKey);
 
-        MatchApiClient.MatchCallback<JSONObject> apiCallback = new MatchApiClient.MatchCallback<JSONObject>() {
+        matchApiClient.match(matchBundle.toBundle(), new ResponseCallback<JSONObject>() {
             @Override
-            public void onSuccess(JSONObject response) {
-                try {
+            public void ok(JSONObject response) {
+                try {                    
                     MatchResponse matchResponse = new MatchResponse(
-                        response.optString("utm_source", response.getString("utm_source")),
-                        response.optString("utm_medium", response.getString("utm_medium")),
-                        response.optString("utm_campaign", response.getString("utm_campaign"))
+                        response.getString("utm_source"), 
+                        response.getString("utm_medium"), 
+                        response.getString("utm_campaign")
                     );
-                    
-                    callback.onSuccess((T) matchResponse);
-                } catch (Exception e) {
-                    Log.e(TAG, "Error processing response: " + e.getMessage(), e);
-                    callback.onError("Error processing response from server");
-                } finally {
+
+                    Log.d(TAG, "Match API call successful: " + matchResponse.toBundle());
+                    callback.ok(matchResponse);
+                } 
+                catch (Exception e) {
+                    Log.e(TAG, "Error processing Match API response: " + e.getMessage(), e);
+                    callback.error(e);
+                } 
+                finally {
                     // Cleanup the client after use
                     matchApiClient.shutdown();
                 }
             }
 
             @Override
-            public void onError(String error) {
-                Log.e(TAG, "Error in API call: " + error);
-                callback.onError(error);
+            public void error(Exception e) {
                 // Cleanup the client after error
                 matchApiClient.shutdown();
+                
+                Log.e(TAG, "Error in Match API call: " + e.getMessage());
+                callback.error(e);
             }
-        };
-        
-        matchApiClient.match(searchBundle, apiCallback);
-    }
-
-    public interface MatchCallback<T extends MatchResponse> {
-        void onSuccess(T response);
-        void onError(String error);
+        });
     }
 }

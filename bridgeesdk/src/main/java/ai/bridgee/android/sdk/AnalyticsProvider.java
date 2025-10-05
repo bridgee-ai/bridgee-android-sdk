@@ -18,4 +18,12 @@ public interface AnalyticsProvider {
      */
     void logEvent(String name, Bundle params);
 
+    /**
+     * Sets a user property.
+     *
+     * @param name  The name of the user property to be set.
+     * @param value The value of the user property to be set.
+     */
+    void setUserProperty(String name, String value);
+
 }
