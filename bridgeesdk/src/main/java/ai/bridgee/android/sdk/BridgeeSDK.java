@@ -53,13 +53,17 @@ public class BridgeeSDK {
         return instance;
     }
 
+    public void firstOpen(MatchBundle mb) {
+        this.firstOpen(mb, null);
+    }
+
     /**
      * Register some user attributes and events to firebase so we vinculate the installment to the right channel.
      * 
      * @param mb user data that you can send to help us match the user with the right attribution event.
      * the more data you provide, the more accurate the match will be.
      */
-    public void firstOpen(MatchBundle mb) {
+    public void firstOpen(MatchBundle mb, ResponseCallback<MatchResponse> callback) {
         MatchBundle matchBundle = cloneMatchBundle(mb);
         matchBundle.withCustomParam("event_name", FIRST_OPEN_EVENT_NAME);
 
@@ -83,11 +87,16 @@ public class BridgeeSDK {
                 Log.d(TAG, "Logging reserved events");
                 logEvent(FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
                 logEvent(CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
+
+                if (callback != null)
+                    callback.ok(matchResponse);
             }
 
             @Override
             public void error(Exception e) {
                 Log.e(TAG, "Failed to resolve attribution: " + e.getMessage());
+                if (callback != null)
+                    callback.error(e);
             }
         });
         
