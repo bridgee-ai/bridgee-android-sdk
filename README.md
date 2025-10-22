@@ -26,7 +26,7 @@ Adicione a dependência no arquivo `build.gradle` do seu módulo:
 
 ```gradle
 dependencies {
-    implementation 'ai.bridgee:bridgee-android-sdk:2.2.0'
+    implementation 'ai.bridgee:bridgee-android-sdk:2.3.0'
 }
 ```
 
@@ -36,7 +36,7 @@ dependencies {
 <dependency>
     <groupId>ai.bridgee</groupId>
     <artifactId>bridgee-android-sdk</artifactId>
-    <version>2.2.0</version>
+    <version>2.3.0</version>
 </dependency>
 ```
 
@@ -129,6 +129,8 @@ public class MainActivity extends AppCompatActivity {
 }
 ```
 
+> 💡 **Projeto de Exemplo Completo**: Confira o [bridgee-android-example](https://github.com/bridgee-ai/bridgee-android-example) para ver uma implementação completa com interface de usuário e tratamento de callbacks.
+
 ---
 
 ## 📚 Guia Detalhado
@@ -168,6 +170,21 @@ O SDK define automaticamente as seguintes propriedades de usuário:
 | `install_source` | Fonte da instalação (UTM Source) |
 | `install_medium` | Meio da instalação (UTM Medium) |
 | `install_campaign` | Campanha da instalação (UTM Campaign) |
+
+---
+
+## 📱 Projeto de Exemplo
+
+Para uma implementação completa com interface de usuário, callbacks e tratamento de erros, confira nosso projeto de exemplo:
+
+🔗 **[bridgee-android-example](https://github.com/bridgee-ai/bridgee-android-example)**
+
+O projeto de exemplo inclui:
+- ✅ Formulário interativo para testar o SDK
+- ✅ Implementação completa com callbacks
+- ✅ Exibição de UTMs retornados pela API
+- ✅ Tratamento de erros com diálogos informativos
+- ✅ Integração com Firebase Analytics
 
 ---
 
@@ -317,6 +334,7 @@ adb logcat -s BRIDGEE-SDK
 
 ## 🔗 Links Úteis
 
+- 📱 [Projeto de Exemplo](https://github.com/bridgee-ai/bridgee-android-example) - Implementação completa com UI
 - 📦 [Maven Central](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
 - 🐛 [Reportar Issues](https://github.com/bridgee-ai/bridgee-android-sdk/issues)
 - 💬 [Suporte Técnico](mailto:support@bridgee.ai)

@@ -22,7 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import org.json.JSONObject;
 import org.json.JSONException;
-import ai.bridgee.android.sdk.internal.util.ResponseCallback;
+import ai.bridgee.android.sdk.ResponseCallback;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;

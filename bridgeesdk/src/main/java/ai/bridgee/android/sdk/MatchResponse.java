@@ -1,7 +1,10 @@
-package ai.bridgee.android.sdk.internal.model;
+package ai.bridgee.android.sdk;
 
 import android.os.Bundle;
 
+/**
+ * Response object containing UTM attribution parameters from the Bridgee API.
+ */
 public class MatchResponse {
     private final String utmSource;
     private final String utmMedium;
@@ -13,10 +16,31 @@ public class MatchResponse {
         this.utmCampaign = utmCampaign;
     }
 
-    public String getUtmSource() { return utmSource; }
-    public String getUtmMedium() { return utmMedium; }
-    public String getUtmCampaign() { return utmCampaign; }
+    /**
+     * @return The UTM source parameter
+     */
+    public String getUtmSource() { 
+        return utmSource; 
+    }
+    
+    /**
+     * @return The UTM medium parameter
+     */
+    public String getUtmMedium() { 
+        return utmMedium; 
+    }
+    
+    /**
+     * @return The UTM campaign parameter
+     */
+    public String getUtmCampaign() { 
+        return utmCampaign; 
+    }
 
+    /**
+     * Converts the response to an Android Bundle for analytics integration.
+     * @return Bundle containing UTM parameters
+     */
     public Bundle toBundle() {
         Bundle bundle = new Bundle();
         if (utmSource != null) { 
@@ -32,5 +56,14 @@ public class MatchResponse {
             bundle.putString("campaign", utmCampaign); 
         }
         return bundle;
+    }
+    
+    @Override
+    public String toString() {
+        return "MatchResponse{" +
+                "utmSource='" + utmSource + '\'' +
+                ", utmMedium='" + utmMedium + '\'' +
+                ", utmCampaign='" + utmCampaign + '\'' +
+                '}';
     }
 }

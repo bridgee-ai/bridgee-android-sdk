@@ -8,7 +8,7 @@ import android.util.Log;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
-import ai.bridgee.android.sdk.internal.util.ResponseCallback;
+import ai.bridgee.android.sdk.ResponseCallback;
 
 /**
  * Resolver for extracting bfpid from Google Play Install Referrer API

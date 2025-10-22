@@ -7,9 +7,7 @@ import android.util.Log;
 import ai.bridgee.android.sdk.internal.api.MatchApiClient;
 import ai.bridgee.android.sdk.internal.api.InstallReferrerResolver;
 import ai.bridgee.android.sdk.internal.model.MatchRequest;
-import ai.bridgee.android.sdk.internal.model.MatchResponse;
 import ai.bridgee.android.sdk.internal.util.TenantTokenEncoder;
-import ai.bridgee.android.sdk.internal.util.ResponseCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
