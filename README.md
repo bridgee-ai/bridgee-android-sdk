@@ -1,98 +1,340 @@
-# Bridgee.ai - Guia de Implantação
+# Bridgee Android SDK
 
-## 📖 Introdução
-O **Bridgee.ai** é uma solução de atribuição que conecta suas campanhas de aquisição de usuários aos eventos de instalação e abertura do seu aplicativo.  
-Ele funciona em duas etapas principais:
+[![Maven Central](https://img.shields.io/maven-central/v/ai.bridgee/bridgee-android-sdk)](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
+[![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-1. **Bridgee Blink (proxy de links):** captura dados de atribuição quando o usuário clica em um link para sua loja de aplicativos.  
-2. **Bridgee SDK:** atribui corretamente a instalação no primeiro uso do aplicativo, enviando os dados já enriquecidos ao **Firebase Analytics / GA4**.
+## 📖 Visão Geral
+
+O **Bridgee Android SDK** é uma solução completa de atribuição que conecta suas campanhas de marketing aos eventos de instalação e primeira abertura do seu aplicativo Android. Ele resolve o problema de atribuição precisa em campanhas de aquisição de usuários, integrando-se perfeitamente com provedores de analytics como Firebase Analytics.
+
+### 🎯 Principais Funcionalidades
+
+- **Atribuição Precisa**: Conecta cliques em campanhas com instalações reais
+- **Install Referrer**: Utiliza o Android Install Referrer para dados confiáveis
+- **Integração Flexível**: Funciona com qualquer provedor de analytics
+- **Callbacks Assíncronos**: Receba dados de atribuição em tempo real
+- **Eventos Automáticos**: Dispara eventos padronizados automaticamente
+- **User Properties**: Define propriedades de usuário com dados de atribuição
 
 ---
 
-## ⚙️ Como funciona
+## 🚀 Instalação
 
-### 1. Bridgee Blink
-Todo link que leva à loja de aplicativos deve passar por um proxy que chamamos de **Bridgee Blink**.  
-Quando o usuário acessa o link Blink:
-- Ele verá um pequeno "piscar" antes de ser redirecionado à loja.  
-- Nesse momento, coletamos os parâmetros necessários para o **match de atribuição**.  
+### Gradle (Recomendado)
 
-Exemplo de link original:
+Adicione a dependência no arquivo `build.gradle` do seu módulo:
+
+```gradle
+dependencies {
+    implementation 'ai.bridgee:bridgee-android-sdk:2.2.0'
+}
 ```
-https://play.google.com/store/apps/details?id=com.je7ov.exampleapp
+
+### Maven
+
+```xml
+<dependency>
+    <groupId>ai.bridgee</groupId>
+    <artifactId>bridgee-android-sdk</artifactId>
+    <version>2.2.0</version>
+</dependency>
 ```
 
-Exemplo de link com Bridgee Blink:
+---
+
+## 🔧 Configuração Rápida
+
+### 1. Implementar AnalyticsProvider
+
+Primeiro, crie uma implementação do `AnalyticsProvider` para seu provedor de analytics:
+
+```java
+// Para Firebase Analytics
+public class FirebaseAnalyticsProvider implements AnalyticsProvider {
+    private FirebaseAnalytics analytics;
+    
+    public FirebaseAnalyticsProvider(Context context) {
+        this.analytics = FirebaseAnalytics.getInstance(context);
+    }
+    
+    @Override
+    public void logEvent(String name, Bundle params) {
+        analytics.logEvent(name, params);
+    }
+    
+    @Override
+    public void setUserProperty(String name, String value) {
+        analytics.setUserProperty(name, value);
+    }
+}
 ```
-https://download.example.com/store/apps/details?id=com.je7ov.exampleapp
+
+### 2. Inicializar o SDK
+
+```java
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        
+        // Configurar o provider de analytics
+        AnalyticsProvider provider = new FirebaseAnalyticsProvider(this);
+        
+        // Inicializar o Bridgee SDK
+        BridgeeSDK sdk = BridgeeSDK.getInstance(
+            this,                    // Context
+            provider,               // AnalyticsProvider
+            "seu_tenant_id",        // Tenant ID fornecido pela Bridgee
+            "sua_tenant_key",       // Tenant Key fornecida pela Bridgee
+            false                   // Dry run (false para produção)
+        );
+    }
+}
 ```
 
-> O subdomínio (`download.example.com`) é definido em comum acordo com sua empresa, e precisa apontar para os servidores da Bridgee.
+### 3. Registrar Primeira Abertura
+
+No evento de primeira abertura do app (geralmente na MainActivity):
+
+```java
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // Verificar se é a primeira abertura
+        if (isFirstOpen()) {
+            BridgeeSDK sdk = BridgeeSDK.getInstance(/* parâmetros já configurados */);
+            
+            // Versão simples
+            sdk.firstOpen(new MatchBundle());
+            
+            // Ou versão com callback para receber dados de atribuição
+            sdk.firstOpen(new MatchBundle(), new ResponseCallback<MatchResponse>() {
+                @Override
+                public void ok(MatchResponse response) {
+                    Log.i("Bridgee", "Atribuição resolvida:");
+                    Log.i("Bridgee", "Source: " + response.getUtmSource());
+                    Log.i("Bridgee", "Medium: " + response.getUtmMedium());
+                    Log.i("Bridgee", "Campaign: " + response.getUtmCampaign());
+                }
+                
+                @Override
+                public void error(Exception e) {
+                    Log.e("Bridgee", "Erro na atribuição: " + e.getMessage());
+                }
+            });
+        }
+    }
+}
+```
 
 ---
 
-### 2. Bridgee SDK
-Após a instalação e **primeira abertura do app**:
-- O SDK do Bridgee dispara o evento `first_open`.  
-- Nesse momento, vinculamos os **UTMs capturados no Blink** à instalação.  
-- O evento é então enviado ao **Firebase Analytics (GA4)** já com a atribuição correta.  
+## 📚 Guia Detalhado
+
+### MatchBundle - Melhorando a Precisão
+
+O `MatchBundle` permite enviar dados adicionais para melhorar a precisão do match:
+
+```java
+MatchBundle bundle = new MatchBundle()
+    .withEmail("usuario@email.com")      // Email do usuário
+    .withPhone("+5511999999999")         // Telefone do usuário
+    .withName("João Silva")              // Nome do usuário
+    .withGclid("gclid_value")           // Google Click ID
+    .withCustomParam("user_id", "123");  // Parâmetros customizados
+
+sdk.firstOpen(bundle, callback);
+```
+
+### Eventos Automáticos
+
+O SDK automaticamente dispara os seguintes eventos:
+
+| Evento | Descrição |
+|--------|-----------|
+| `first_open` | Primeira abertura do app |
+| `campaign_details` | Detalhes da campanha de atribuição |
+| `{tenant_id}_first_open` | Evento personalizado por tenant |
+| `{tenant_id}_campaign_details` | Evento de campanha personalizado |
+
+### User Properties Automáticas
+
+O SDK define automaticamente as seguintes propriedades de usuário:
+
+| Propriedade | Descrição |
+|-------------|-----------|
+| `install_source` | Fonte da instalação (UTM Source) |
+| `install_medium` | Meio da instalação (UTM Medium) |
+| `install_campaign` | Campanha da instalação (UTM Campaign) |
 
 ---
 
-## 🚀 Guia de implantação
+## 🔍 Exemplo Completo
 
-### Passo 1 - Configurar o Blink
-1. Defina um subdomínio livre, por exemplo:  
-   ```
-   download.example.com
-   ```
-2. Solicite ao time de TI da sua empresa que faça o **apontamento DNS** do subdomínio para o **IP dos servidores Bridgee** (fornecido pela nossa equipe).  
-3. Após a configuração, a equipe Bridgee habilitará o Blink e fornecerá a URL final.  
-4. Use a nova URL (com Blink) em todas as suas campanhas, e-mails e peças de marketing.  
+```java
+public class BridgeeManager {
+    private static BridgeeSDK bridgeeSDK;
+    private static final String TAG = "BridgeeManager";
+    
+    public static void initialize(Context context, String tenantId, String tenantKey) {
+        if (bridgeeSDK == null) {
+            AnalyticsProvider provider = new FirebaseAnalyticsProvider(context);
+            bridgeeSDK = BridgeeSDK.getInstance(context, provider, tenantId, tenantKey, false);
+        }
+    }
+    
+    public static void trackFirstOpen() {
+        if (bridgeeSDK == null) {
+            Log.w(TAG, "SDK não inicializado");
+            return;
+        }
+        
+        MatchBundle bundle = new MatchBundle()
+            .withCustomParam("app_version", BuildConfig.VERSION_NAME);
+            
+        bridgeeSDK.firstOpen(bundle, new ResponseCallback<MatchResponse>() {
+            @Override
+            public void ok(MatchResponse response) {
+                Log.i(TAG, "✅ Atribuição bem-sucedida!");
+                Log.i(TAG, "📊 UTM Source: " + response.getUtmSource());
+                Log.i(TAG, "📱 UTM Medium: " + response.getUtmMedium());
+                Log.i(TAG, "🎯 UTM Campaign: " + response.getUtmCampaign());
+                
+                // Aqui você pode executar lógica adicional baseada na atribuição
+                handleAttributionSuccess(response);
+            }
+            
+            @Override
+            public void error(Exception e) {
+                Log.e(TAG, "❌ Erro na atribuição: " + e.getMessage(), e);
+                
+                // Implementar fallback ou retry se necessário
+                handleAttributionError(e);
+            }
+        });
+    }
+    
+    private static void handleAttributionSuccess(MatchResponse response) {
+        // Implementar lógica específica do app
+    }
+    
+    private static void handleAttributionError(Exception error) {
+        // Implementar tratamento de erro
+    }
+}
+```
 
 ---
 
-### Passo 2 - Integrar o SDK no aplicativo Android
-1. Garanta que seu aplicativo já esteja integrado ao **Firebase Analytics SDK**.  
-2. Adicione a dependência do Bridgee SDK no seu `build.gradle`:  
-   ```gradle
-   implementation 'ai.bridgee:bridgee-android-sdk:1.0.0'
-   ```
-   > Consulte sempre a versão mais recente em:  
-   > [Maven Repository - Bridgee SDK](https://mvnrepository.com/artifact/ai.bridgee/bridgee-android-sdk)
+## ⚙️ Configuração Avançada
 
-3. Instancie o SDK do Bridgee passando o objeto do Firebase Analytics, sua **API Key** e **API Secret**:  
-   ```java
-   BridgeeSdk bridgee = new BridgeeSdk(firebaseAnalytics, apikey, apisecret);
-   ```
+### Modo Dry Run
 
-4. No evento de **primeira abertura (first_open)**, acione o SDK:  
-   ```java
-   bridgee.logEvent("first_open");
-   ```
+Para testes, você pode habilitar o modo dry run:
 
-Pronto ✅ — a integração estará concluída.
+```java
+BridgeeSDK sdk = BridgeeSDK.getInstance(context, provider, tenantId, tenantKey, true);
+```
+
+No modo dry run, o SDK:
+- ✅ Executa toda a lógica de atribuição
+- ✅ Gera logs detalhados
+- ❌ **NÃO** envia eventos para o analytics provider
+
+### Configuração via BuildConfig
+
+```java
+// No build.gradle
+android {
+    buildTypes {
+        debug {
+            buildConfigField "String", "BRIDGEE_TENANT_ID", "\"${BRIDGEE_TENANT_ID}\""
+            buildConfigField "String", "BRIDGEE_TENANT_KEY", "\"${BRIDGEE_TENANT_KEY}\""
+            buildConfigField "boolean", "BRIDGEE_DRY_RUN", "true"
+        }
+        release {
+            buildConfigField "String", "BRIDGEE_TENANT_ID", "\"${BRIDGEE_TENANT_ID}\""
+            buildConfigField "String", "BRIDGEE_TENANT_KEY", "\"${BRIDGEE_TENANT_KEY}\""
+            buildConfigField "boolean", "BRIDGEE_DRY_RUN", "false"
+        }
+    }
+}
+
+// No código
+BridgeeSDK.getInstance(
+    context, 
+    provider, 
+    BuildConfig.BRIDGEE_TENANT_ID,
+    BuildConfig.BRIDGEE_TENANT_KEY,
+    BuildConfig.BRIDGEE_DRY_RUN
+);
+```
 
 ---
 
-## 📋 Requisitos técnicos
-- App já integrado ao **Firebase Analytics**.  
-- Permissão para configurar/apontar DNS para o Blink.  
-- Android SDK disponível via Maven.  
-- Credenciais **API Key** e **API Secret** fornecidas pela Bridgee.  
+## 📋 Requisitos
+
+- **Android API Level**: 21+ (Android 5.0)
+- **Target SDK**: 34
+- **Java**: 8+
+- **Dependências**:
+  - `com.android.installreferrer:installreferrer:2.2`
+  - `com.google.code.gson:gson:2.10.1`
 
 ---
 
-## 🛠 Roadmap de SDKs
-Atualmente disponível:
-- ✅ Android SDK
+## 🐛 Troubleshooting
 
-Em breve:
-- ⏳ iOS SDK  
-- ⏳ React Native SDK  
-- ⏳ Flutter SDK  
+### Problemas Comuns
+
+**1. NoClassDefFoundError: InstallReferrerClient**
+```
+Solução: Verifique se a dependência installreferrer está incluída
+implementation 'com.android.installreferrer:installreferrer:2.2'
+```
+
+**2. Eventos não aparecem no Firebase**
+```
+Solução: Verifique se o modo dry run está desabilitado em produção
+```
+
+**3. Callback não é executado**
+```
+Solução: Verifique a conectividade de rede e as credenciais do tenant
+```
+
+### Logs de Debug
+
+Para habilitar logs detalhados, use o filtro `BRIDGEE-SDK` no Logcat:
+
+```bash
+adb logcat -s BRIDGEE-SDK
+```
 
 ---
 
-## 📞 Suporte
-Em caso de dúvidas ou suporte técnico, entre em contato com a equipe Bridgee.  
+## 🔗 Links Úteis
+
+- 📦 [Maven Central](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
+- 📖 [Documentação Completa](https://docs.bridgee.ai)
+- 🐛 [Reportar Issues](https://github.com/bridgee-ai/bridgee-android-sdk/issues)
+- 💬 [Suporte Técnico](mailto:support@bridgee.ai)
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Por favor, leia nosso [Guia de Contribuição](CONTRIBUTING.md) antes de submeter pull requests.
+
+---
+
+**Desenvolvido com ❤️ pela equipe Bridgee.ai**  
