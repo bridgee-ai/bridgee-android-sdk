@@ -2,7 +2,6 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/ai.bridgee/bridgee-android-sdk)](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 📖 Visão Geral
 
@@ -319,22 +318,7 @@ adb logcat -s BRIDGEE-SDK
 ## 🔗 Links Úteis
 
 - 📦 [Maven Central](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
-- 📖 [Documentação Completa](https://docs.bridgee.ai)
 - 🐛 [Reportar Issues](https://github.com/bridgee-ai/bridgee-android-sdk/issues)
 - 💬 [Suporte Técnico](mailto:support@bridgee.ai)
-
----
-
-## 📄 Licença
-
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
----
-
-## 🤝 Contribuição
-
-Contribuições são bem-vindas! Por favor, leia nosso [Guia de Contribuição](CONTRIBUTING.md) antes de submeter pull requests.
-
----
 
 **Desenvolvido com ❤️ pela equipe Bridgee.ai**  
