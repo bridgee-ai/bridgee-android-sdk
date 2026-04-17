@@ -150,26 +150,9 @@ MatchBundle bundle = new MatchBundle()
 sdk.firstOpen(bundle, callback);
 ```
 
-### Eventos Automáticos
+### Eventos e Propriedades de Usuário
 
-O SDK automaticamente dispara os seguintes eventos:
-
-| Evento | Descrição |
-|--------|-----------|
-| `first_open` | Primeira abertura do app |
-| `campaign_details` | Detalhes da campanha de atribuição |
-| `{tenant_id}_first_open` | Evento personalizado por tenant |
-| `{tenant_id}_campaign_details` | Evento de campanha personalizado |
-
-### User Properties Automáticas
-
-O SDK define automaticamente as seguintes propriedades de usuário:
-
-| Propriedade | Descrição |
-|-------------|-----------|
-| `install_source` | Fonte da instalação (UTM Source) |
-| `install_medium` | Meio da instalação (UTM Medium) |
-| `install_campaign` | Campanha da instalação (UTM Campaign) |
+Quando a atribuição é resolvida, o SDK dispara automaticamente eventos padronizados de atribuição e define propriedades de usuário através do seu `AnalyticsProvider`. Isso garante que os dados de UTM fiquem associados a toda a sessão do usuário na sua ferramenta de analytics (Firebase, Amplitude, etc.), sem que você precise tratar isso manualmente.
 
 ---
 
@@ -258,6 +241,7 @@ BridgeeSDK sdk = BridgeeSDK.getInstance(context, provider, tenantId, tenantKey, 
 No modo dry run, o SDK:
 - ✅ Executa toda a lógica de atribuição
 - ✅ Gera logs detalhados
+- ✅ Faz chamadas à API
 - ❌ **NÃO** envia eventos para o analytics provider
 
 ### Configuração via BuildConfig
@@ -336,6 +320,8 @@ adb logcat -s BRIDGEE-SDK
 
 - 📱 [Projeto de Exemplo](https://github.com/bridgee-ai/bridgee-android-example) - Implementação completa com UI
 - 📦 [Maven Central](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
+- 🍎 [Bridgee iOS SDK](https://github.com/bridgee-ai/bridgee-ios-sdk)
+- ⚛️ [Bridgee React Native SDK](https://github.com/bridgee-ai/bridgee-react-native-sdk)
 - 🐛 [Reportar Issues](https://github.com/bridgee-ai/bridgee-android-sdk/issues)
 - 💬 [Suporte Técnico](mailto:support@bridgee.ai)
 
