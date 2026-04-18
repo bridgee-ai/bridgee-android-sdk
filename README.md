@@ -13,8 +13,7 @@ O **Bridgee Android SDK** é uma solução completa de atribuição que conecta 
 - **Install Referrer**: Utiliza o Android Install Referrer para dados confiáveis
 - **Integração Flexível**: Funciona com qualquer provedor de analytics
 - **Callbacks Assíncronos**: Receba dados de atribuição em tempo real
-- **Eventos Automáticos**: Dispara eventos padronizados automaticamente
-- **User Properties**: Define propriedades de usuário com dados de atribuição
+- **Atribuição de Sessão Automática**: O SDK cuida da comunicação com seu provedor de analytics para associar a sessão do usuário ao canal de aquisição
 
 ---
 
@@ -135,11 +134,15 @@ public class MainActivity extends AppCompatActivity {
 
 ## 📚 Guia Detalhado
 
-### MatchBundle - Melhorando a Precisão
+### MatchBundle — Opcional, mas recomendado
 
-O `MatchBundle` permite enviar dados adicionais para melhorar a precisão do match:
+**Todos os campos do `MatchBundle` são opcionais.** O SDK consegue resolver a atribuição mesmo com um bundle vazio, usando sinais de dispositivo e rede (fingerprint) para reconciliar com o clique original. No entanto, **quanto mais dados você fornecer, maior a confiança do match** — especialmente em cenários de alto volume ou com múltiplos usuários compartilhando a mesma rede (Wi-Fi corporativo, NAT, etc.).
 
 ```java
+// Bundle vazio — funciona, mas com confiança menor
+sdk.firstOpen(new MatchBundle(), callback);
+
+// Bundle enriquecido — maior confiança no match
 MatchBundle bundle = new MatchBundle()
     .withEmail("usuario@email.com")      // Email do usuário
     .withPhone("+5511999999999")         // Telefone do usuário
@@ -150,9 +153,11 @@ MatchBundle bundle = new MatchBundle()
 sdk.firstOpen(bundle, callback);
 ```
 
-### Eventos e Propriedades de Usuário
+> 🔗 **Propague os mesmos sinais nos blinks.** Para que a reconciliação seja máxima, os parâmetros enviados ao `firstOpen()` devem também estar presentes nas URLs de captura (os **blinks**, ex.: `https://android.seuapp.com.br/?email=...&phone=...&utm_source=...`). O servidor Bridgee compara os sinais dos dois lados (clique vs. instalação) — quanto maior a interseção, mais eficiente e preciso o match.
 
-Quando a atribuição é resolvida, o SDK dispara automaticamente eventos padronizados de atribuição e define propriedades de usuário através do seu `AnalyticsProvider`. Isso garante que os dados de UTM fiquem associados a toda a sessão do usuário na sua ferramenta de analytics (Firebase, Amplitude, etc.), sem que você precise tratar isso manualmente.
+### Atribuição Automática da Sessão
+
+Quando a atribuição é resolvida, o SDK se encarrega de comunicar os dados de aquisição ao seu provedor de analytics (Firebase, Amplitude, etc.), garantindo que toda a sessão do usuário fique associada ao canal de origem — sem necessidade de tratamento manual no código do app.
 
 ---
 
