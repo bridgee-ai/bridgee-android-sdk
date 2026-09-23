@@ -70,21 +70,7 @@ public class BridgeeSDK {
             public void ok(MatchResponse matchResponse) {
                 Log.d(TAG, "Attribution resolved: " + matchResponse);
 
-                // user properties
-                Log.d(TAG, "Setting user properties");
-                setUserProperty("install_source", matchResponse.getUtmSource());
-                setUserProperty("install_medium", matchResponse.getUtmMedium());
-                setUserProperty("install_campaign", matchResponse.getUtmCampaign());            
-
-                // custom events
-                Log.d(TAG, "Logging custom events");
-                logEvent(tenantId + "_" + FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
-                logEvent(tenantId + "_" + CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
-
-                // reserved events
-                Log.d(TAG, "Logging reserved events");
-                logEvent(FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
-                logEvent(CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
+                deliverAttribution(matchResponse);
 
                 if (callback != null)
                     callback.ok(matchResponse);
@@ -98,6 +84,16 @@ public class BridgeeSDK {
             }
         });
         
+    }
+
+    // Visibilidade de pacote permite testar a entrega sem chamar a API real.
+    void deliverAttribution(MatchResponse response) {
+        setUserProperty("install_source", response.getUtmSource());
+        setUserProperty("install_medium", response.getUtmMedium());
+        setUserProperty("install_campaign", response.getUtmCampaign());
+        // Firebase é responsável por first_open; Bridgee entrega apenas a campanha.
+        logEvent(tenantId + "_" + CAMPAIGN_DETAILS_EVENT_NAME, response.toBundle());
+        logEvent(CAMPAIGN_DETAILS_EVENT_NAME, response.toBundle());
     }
 
     /****** PRIVATE METHODS *******/
@@ -139,7 +135,7 @@ public class BridgeeSDK {
         return new MatchBundle(clone);
     }
 
-    private BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
+    BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }

@@ -331,3 +331,7 @@ adb logcat -s BRIDGEE-SDK
 - 💬 [Suporte Técnico](mailto:support@bridgee.ai)
 
 **Desenvolvido com ❤️ pela equipe Bridgee.ai**  
+
+## Measurement Lab: migração incremental
+
+Veja [delta implementado, dependências e critérios de aceite](docs/measurement-lab-migration.md).
