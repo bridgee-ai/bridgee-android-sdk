@@ -49,4 +49,19 @@ public class AttributionDeliveryTest {
         assertTrue(provider.events.isEmpty());
         assertTrue(provider.properties.isEmpty());
     }
+    @Test
+    public void deniedConsentAndNativeGoogleDoNotResolveOrDeliver() {
+        RecordingProvider provider = new RecordingProvider();
+        BridgeeSDK sdk = new BridgeeSDK(RuntimeEnvironment.getApplication(), provider, "tenant-test", "test-only", false);
+        final List<String> results = new ArrayList<>();
+        ResponseCallback<MatchResponse> callback = new ResponseCallback<MatchResponse>() {
+            public void ok(MatchResponse response) { results.add(response.getUtmSource()); }
+            public void error(Exception error) { results.add(error.getMessage()); }
+        };
+        sdk.firstOpenWithConsent(new MatchBundle(), false, false, callback);
+        sdk.firstOpenWithConsent(new MatchBundle(), true, true, callback);
+        assertEquals(java.util.Arrays.asList("attribution_consent_required", ""), results);
+        assertTrue(provider.events.isEmpty());
+        assertTrue(provider.properties.isEmpty());
+    }
 }

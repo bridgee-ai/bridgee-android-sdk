@@ -86,6 +86,20 @@ public class BridgeeSDK {
         
     }
 
+    /** Explicit policy entry: denied consent and native Google never call the match API. */
+    public void firstOpenWithConsent(MatchBundle bundle, boolean consentGranted,
+            boolean preserveNativeGoogleAttribution, ResponseCallback<MatchResponse> callback) {
+        if (!consentGranted) {
+            if (callback != null) callback.error(new IllegalStateException("attribution_consent_required"));
+            return;
+        }
+        if (preserveNativeGoogleAttribution) {
+            if (callback != null) callback.ok(new MatchResponse("", "", ""));
+            return;
+        }
+        firstOpen(bundle, callback);
+    }
+
     // Visibilidade de pacote permite testar a entrega sem chamar a API real.
     void deliverAttribution(MatchResponse response) {
         setUserProperty("install_source", response.getUtmSource());
