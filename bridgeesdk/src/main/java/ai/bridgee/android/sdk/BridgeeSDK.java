@@ -68,7 +68,7 @@ public class BridgeeSDK {
         resolveAttribution(matchBundle, new ResponseCallback<MatchResponse>() {
             @Override
             public void ok(MatchResponse matchResponse) {
-                Log.d(TAG, "Attribution resolved: " + matchResponse);
+                Log.d(TAG, "Attribution resolved");
 
                 deliverAttribution(matchResponse);
 
@@ -78,7 +78,7 @@ public class BridgeeSDK {
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve attribution: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve attribution");
                 if (callback != null)
                     callback.error(e);
             }
@@ -113,27 +113,27 @@ public class BridgeeSDK {
     /****** PRIVATE METHODS *******/
 
     private void setUserProperty(String name, String value) {
-        Log.d(TAG, "Setting user property: " + name + " >> " + value);
+        Log.d(TAG, "Setting attribution user property");
         if (!dryRun) {
             try {
                 name = name.replace("-", "_");
                 analyticsProvider.setUserProperty(name, value);
             }
             catch (Exception e) {
-                Log.e(TAG, "Failed to set user property: " + name + " >> " + value, e);
+                Log.e(TAG, "Failed to set attribution user property");
             }
         }
     }
     
     private void logEvent(String name, Bundle params) {
-        Log.d(TAG, "Logging event: " + name + " >> " + params);
+        Log.d(TAG, "Delivering attribution event");
         if (!dryRun) {
             try {
                 name = name.replace("-", "_");
                 analyticsProvider.logEvent(name, params);
             }
             catch (Exception e) {
-                Log.e(TAG, "Failed to log event: " + name + " >> " + params, e);
+                Log.e(TAG, "Failed to deliver attribution event");
             }        
         }
     }
@@ -181,13 +181,13 @@ public class BridgeeSDK {
                 resolveMatch(matchBundle, new ResponseCallback<MatchResponse>() {
                     @Override
                     public void ok(MatchResponse matchResponse) {
-                        Log.d(TAG, "Match resolved: " + matchResponse);
+                        Log.d(TAG, "Match resolved");
                         callback.ok(matchResponse);
                     }
 
                     @Override
                     public void error(Exception e) {
-                        Log.e(TAG, "Failed to resolve match: " + e.getMessage());
+                        Log.e(TAG, "Failed to resolve match");
                         callback.error(e);
                     }
                 });
@@ -195,7 +195,7 @@ public class BridgeeSDK {
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve install referrer");
                 callback.error(e);
             }
         });
@@ -205,13 +205,13 @@ public class BridgeeSDK {
         instalReferrerResolver.resolve(new ResponseCallback<String>() {
             @Override
             public void ok(String installReferrer) {              
-                Log.d(TAG, "Install referrer resolved: " + installReferrer);
+                Log.d(TAG, "Install referrer resolved");
                 callback.ok(installReferrer);
             }
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve install referrer");
                 callback.error(e);
             }
         });
@@ -231,11 +231,11 @@ public class BridgeeSDK {
                         response.getString("utm_campaign")
                     );
 
-                    Log.d(TAG, "Match API call successful: " + matchResponse.toBundle());
+                    Log.d(TAG, "Match API call successful");
                     callback.ok(matchResponse);
                 } 
                 catch (Exception e) {
-                    Log.e(TAG, "Error processing Match API response: " + e.getMessage(), e);
+                    Log.e(TAG, "Error processing Match API response");
                     callback.error(e);
                 } 
                 finally {
@@ -249,7 +249,7 @@ public class BridgeeSDK {
                 // Cleanup the client after error
                 matchApiClient.shutdown();
                 
-                Log.e(TAG, "Error in Match API call: " + e.getMessage());
+                Log.e(TAG, "Error in Match API call");
                 callback.error(e);
             }
         });

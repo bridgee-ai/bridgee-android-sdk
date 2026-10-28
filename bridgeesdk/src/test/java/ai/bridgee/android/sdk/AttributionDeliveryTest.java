@@ -15,6 +15,25 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE, sdk = 28)
 public class AttributionDeliveryTest {
+    @Test
+    public void campaignAndProviderErrorsNeverEnterSdkLogs() {
+        org.robolectric.shadows.ShadowLog.clear();
+        AnalyticsProvider provider = new AnalyticsProvider() {
+            public void setUserProperty(String name, String value) {
+                throw new IllegalStateException("private-provider-error");
+            }
+            public void logEvent(String name, Bundle params) {
+                throw new IllegalStateException("private-provider-error");
+            }
+        };
+        BridgeeSDK sdk = new BridgeeSDK(RuntimeEnvironment.getApplication(), provider,
+            "private-tenant", "private-key", false);
+        sdk.deliverAttribution(new MatchResponse("private-source", "private-medium", "private-campaign"));
+        for (org.robolectric.shadows.ShadowLog.LogItem item : org.robolectric.shadows.ShadowLog.getLogs()) {
+            assertFalse(item.msg.contains("private-"));
+            assertNull(item.throwable);
+        }
+    }
     static class RecordingProvider implements AnalyticsProvider {
         final List<String> events = new ArrayList<>();
         final Map<String, String> properties = new HashMap<>();
