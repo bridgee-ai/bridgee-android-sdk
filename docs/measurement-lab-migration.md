@@ -32,7 +32,7 @@ Manter AnalyticsProvider sem dependência Firebase, assinatura firstOpen e Match
   O app fornece links e consentimento; não colocar segredo de HMAC no pacote.
 - Qualidade usa BigQuery por padrão; checkpoint opcional depois do receptor API.
   Não coletar ou emitir purchase, nem interceptar outros eventos Firebase.
-- Redigir logs de referrer/payload; expiração, offline e revogação precisam de testes.
+- Logs de referrer, campanha, propriedades e erros de provider foram redigidos. O cliente HTTP rejeita redirects antes de reenviar credenciais, limita a resposta de sucesso e não expõe o corpo de erro do servidor. Testes de privacidade/transporte incluídos; expiração, offline e revogação continuam exigindo cobertura de integração.
 
 ## Release/aceite
 
@@ -41,3 +41,7 @@ nota de release e revisar consumidores. Atualizar VERSION_NAME/VERSION_CODE,
 create-bundle.sh, README, RN e exemplo somente ao publicar a versão aprovada.
 CI testa/compila, não publica. Validar Orbi e Play Install Referrer num app real;
 Robolectric não comprova Firebase/Google Ads/Play Store homologados.
+
+## Verificação interna de 28/10/2026
+
+CI com nove testes Robolectric e AAR release aprovada para o candidato do PR, incluindo redirects 302, resposta grande/inválida, erros de servidor e logs de provider. Isso não publica uma nova versão Maven nem substitui a homologação em aparelho.
