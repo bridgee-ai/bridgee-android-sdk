@@ -331,3 +331,11 @@ adb logcat -s BRIDGEE-SDK
 - 💬 [Suporte Técnico](mailto:support@bridgee.ai)
 
 **Desenvolvido com ❤️ pela equipe Bridgee.ai**  
+
+## Measurement Lab: migração incremental
+
+Veja [delta implementado, dependências e critérios de aceite](docs/measurement-lab-migration.md).
+
+## Entrada com política explícita
+
+`firstOpenWithConsent(bundle, consentGranted, preserveNativeGoogleAttribution, callback)` interrompe a consulta quando não há consentimento (erro `attribution_consent_required`) ou quando Google nativo deve ser preservado (resposta UTM vazia, sem entrega de campanha). O método legado continua disponível. A política deve vir do app/CMP; não é inferida pela origem UTM. Firebase continua dono de first_open/purchase. A mudança está em código fonte para revisão, sem nova versão Maven publicada.

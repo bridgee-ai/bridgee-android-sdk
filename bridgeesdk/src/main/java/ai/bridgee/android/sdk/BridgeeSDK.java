@@ -68,23 +68,9 @@ public class BridgeeSDK {
         resolveAttribution(matchBundle, new ResponseCallback<MatchResponse>() {
             @Override
             public void ok(MatchResponse matchResponse) {
-                Log.d(TAG, "Attribution resolved: " + matchResponse);
+                Log.d(TAG, "Attribution resolved");
 
-                // user properties
-                Log.d(TAG, "Setting user properties");
-                setUserProperty("install_source", matchResponse.getUtmSource());
-                setUserProperty("install_medium", matchResponse.getUtmMedium());
-                setUserProperty("install_campaign", matchResponse.getUtmCampaign());            
-
-                // custom events
-                Log.d(TAG, "Logging custom events");
-                logEvent(tenantId + "_" + FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
-                logEvent(tenantId + "_" + CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
-
-                // reserved events
-                Log.d(TAG, "Logging reserved events");
-                logEvent(FIRST_OPEN_EVENT_NAME, matchResponse.toBundle());
-                logEvent(CAMPAIGN_DETAILS_EVENT_NAME, matchResponse.toBundle());
+                deliverAttribution(matchResponse);
 
                 if (callback != null)
                     callback.ok(matchResponse);
@@ -92,7 +78,7 @@ public class BridgeeSDK {
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve attribution: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve attribution");
                 if (callback != null)
                     callback.error(e);
             }
@@ -100,30 +86,54 @@ public class BridgeeSDK {
         
     }
 
+    /** Explicit policy entry: denied consent and native Google never call the match API. */
+    public void firstOpenWithConsent(MatchBundle bundle, boolean consentGranted,
+            boolean preserveNativeGoogleAttribution, ResponseCallback<MatchResponse> callback) {
+        if (!consentGranted) {
+            if (callback != null) callback.error(new IllegalStateException("attribution_consent_required"));
+            return;
+        }
+        if (preserveNativeGoogleAttribution) {
+            if (callback != null) callback.ok(new MatchResponse("", "", ""));
+            return;
+        }
+        firstOpen(bundle, callback);
+    }
+
+    // Visibilidade de pacote permite testar a entrega sem chamar a API real.
+    void deliverAttribution(MatchResponse response) {
+        setUserProperty("install_source", response.getUtmSource());
+        setUserProperty("install_medium", response.getUtmMedium());
+        setUserProperty("install_campaign", response.getUtmCampaign());
+        // Firebase é responsável por first_open; Bridgee entrega apenas a campanha.
+        logEvent(tenantId + "_" + CAMPAIGN_DETAILS_EVENT_NAME, response.toBundle());
+        logEvent(CAMPAIGN_DETAILS_EVENT_NAME, response.toBundle());
+    }
+
     /****** PRIVATE METHODS *******/
 
     private void setUserProperty(String name, String value) {
-        Log.d(TAG, "Setting user property: " + name + " >> " + value);
+        Log.d(TAG, "Setting attribution user property");
         if (!dryRun) {
             try {
                 name = name.replace("-", "_");
                 analyticsProvider.setUserProperty(name, value);
             }
             catch (Exception e) {
-                Log.e(TAG, "Failed to set user property: " + name + " >> " + value, e);
+                Log.e(TAG, "Failed to set attribution user property");
             }
         }
     }
     
     private void logEvent(String name, Bundle params) {
-        Log.d(TAG, "Logging event: " + name + " >> " + params);
+        Log.d(TAG, "Delivering attribution event");
         if (!dryRun) {
             try {
                 name = name.replace("-", "_");
                 analyticsProvider.logEvent(name, params);
             }
             catch (Exception e) {
-                Log.e(TAG, "Failed to log event: " + name + " >> " + params, e);
+                Log.e(TAG, "Failed to deliver attribution event");
             }        
         }
     }
@@ -139,7 +149,7 @@ public class BridgeeSDK {
         return new MatchBundle(clone);
     }
 
-    private BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
+    BridgeeSDK(Context context, AnalyticsProvider provider, String tenantId, String tenantKey, Boolean dryRun) {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }
@@ -171,13 +181,13 @@ public class BridgeeSDK {
                 resolveMatch(matchBundle, new ResponseCallback<MatchResponse>() {
                     @Override
                     public void ok(MatchResponse matchResponse) {
-                        Log.d(TAG, "Match resolved: " + matchResponse);
+                        Log.d(TAG, "Match resolved");
                         callback.ok(matchResponse);
                     }
 
                     @Override
                     public void error(Exception e) {
-                        Log.e(TAG, "Failed to resolve match: " + e.getMessage());
+                        Log.e(TAG, "Failed to resolve match");
                         callback.error(e);
                     }
                 });
@@ -185,7 +195,7 @@ public class BridgeeSDK {
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve install referrer");
                 callback.error(e);
             }
         });
@@ -195,13 +205,13 @@ public class BridgeeSDK {
         instalReferrerResolver.resolve(new ResponseCallback<String>() {
             @Override
             public void ok(String installReferrer) {              
-                Log.d(TAG, "Install referrer resolved: " + installReferrer);
+                Log.d(TAG, "Install referrer resolved");
                 callback.ok(installReferrer);
             }
 
             @Override
             public void error(Exception e) {
-                Log.e(TAG, "Failed to resolve install referrer: " + e.getMessage());
+                Log.e(TAG, "Failed to resolve install referrer");
                 callback.error(e);
             }
         });
@@ -221,11 +231,11 @@ public class BridgeeSDK {
                         response.getString("utm_campaign")
                     );
 
-                    Log.d(TAG, "Match API call successful: " + matchResponse.toBundle());
+                    Log.d(TAG, "Match API call successful");
                     callback.ok(matchResponse);
                 } 
                 catch (Exception e) {
-                    Log.e(TAG, "Error processing Match API response: " + e.getMessage(), e);
+                    Log.e(TAG, "Error processing Match API response");
                     callback.error(e);
                 } 
                 finally {
@@ -239,7 +249,7 @@ public class BridgeeSDK {
                 // Cleanup the client after error
                 matchApiClient.shutdown();
                 
-                Log.e(TAG, "Error in Match API call: " + e.getMessage());
+                Log.e(TAG, "Error in Match API call");
                 callback.error(e);
             }
         });
