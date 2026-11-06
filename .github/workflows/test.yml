@@ -21,3 +21,12 @@ jobs:
           gradle-version: '8.2'
       # O repositório ainda não distribui gradle-wrapper.jar.
       - run: gradle :bridgeesdk:testDebugUnitTest :bridgeesdk:assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blink-deferred-android-candidate
+          path: |
+            bridgeesdk/build/outputs/aar/bridgeesdk-release.aar
+            bridgeesdk/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: error
+          retention-days: 7
