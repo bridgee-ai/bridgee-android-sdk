@@ -51,6 +51,21 @@ public class BridgeeSDK {
         return instance;
     }
 
+    /** Resolve only a Play-carried Blinklink. The host app owns routing and successful-consumption persistence. */
+    public void getDeferredDestination(String[] blinklinkPrefixes, String[] appLinkOrigins,
+            ResponseCallback<DeferredDestination> callback) {
+        if (callback == null) throw new IllegalArgumentException("callback_required");
+        final String[] prefixes = blinklinkPrefixes == null ? new String[0] : blinklinkPrefixes.clone();
+        final String[] origins = appLinkOrigins == null ? new String[0] : appLinkOrigins.clone();
+        instalReferrerResolver.resolve(new ResponseCallback<String>() {
+            @Override public void ok(String raw) {
+                ai.bridgee.android.sdk.internal.api.DeferredLinkResolver.resolve(
+                    ai.bridgee.android.sdk.internal.api.DeferredLinkResolver.fromReferrer(raw), prefixes, origins, callback);
+            }
+            @Override public void error(Exception error) { callback.ok(null); }
+        });
+    }
+
     public void firstOpen(MatchBundle mb) {
         this.firstOpen(mb, null);
     }

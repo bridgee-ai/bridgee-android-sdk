@@ -1,76 +1,55 @@
 package ai.bridgee.android.sdk.internal.api;
 
 import android.content.Context;
-import android.net.Uri;
-import android.os.RemoteException;
-import android.util.Log;
-
+import android.os.Handler;
+import android.os.Looper;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
-import com.android.installreferrer.api.ReferrerDetails;
 import ai.bridgee.android.sdk.ResponseCallback;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Resolver for extracting bfpid from Google Play Install Referrer API
- */
+/** Bounded, exactly-once Play referrer read, retaining the legacy success/error contract. */
 public class InstallReferrerResolver {
-    
-    private static final String TAG = "InstallReferrerResolver";
-    
     private final Context context;
-    
-    public InstallReferrerResolver(Context context) {
-        this.context = context.getApplicationContext();
-    }
-    
-    /**
-     * Resolves the bfpid parameter from the install referrer URL
-     * @param callback Callback to receive the bfpid value or null if not found
-     */
-    public void resolve(ResponseCallback<String> callback) {
-        // Create a new client instance for each resolve call
-        InstallReferrerClient referrerClient = InstallReferrerClient.newBuilder(context).build();
-        
-        referrerClient.startConnection(new InstallReferrerStateListener() {
-            @Override
-            public void onInstallReferrerSetupFinished(int responseCode) {
-                switch (responseCode) {
-                    case InstallReferrerClient.InstallReferrerResponse.OK:
-                        try {
-                            ReferrerDetails response = referrerClient.getInstallReferrer();
-                            String referrerUrl = response.getInstallReferrer();
-                            if (referrerUrl == null || referrerUrl.trim().isEmpty())
-                                callback.ok("error:empty");
-                            else
-                                callback.ok("success:" + referrerUrl);
-                        } 
-                        catch (RemoteException e) {
-                            Log.e(TAG, "RemoteException getting install referrer", e);
-                            callback.ok("error:" + e.getMessage());
-                        } finally {
-                            referrerClient.endConnection();
-                        }
-                        break;
-                    case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
-                        Log.w(TAG, "Install Referrer API not supported");
-                        callback.ok("error:not_supported");
-                        break;
-                    case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
-                        Log.w(TAG, "Install Referrer service unavailable");
-                        callback.ok("error:service_unavailable");
-                        break;
-                    default:
-                        Log.w(TAG, "Install Referrer setup failed with code: " + responseCode);
-                        callback.ok("error:setup_failed");
-                        break;
-                }
-            }
+    public InstallReferrerResolver(Context context) { this.context = context.getApplicationContext(); }
 
-            @Override
-            public void onInstallReferrerServiceDisconnected() {
-                Log.d(TAG, "Install Referrer service disconnected");
-                callback.ok("error:service_disconnected");
-            }
-        });
+    public void resolve(ResponseCallback<String> callback) {
+        final InstallReferrerClient client;
+        try { client = InstallReferrerClient.newBuilder(context).build(); }
+        catch (Exception e) { callback.ok("error:unavailable"); return; }
+        Handler handler = new Handler(Looper.getMainLooper());
+        AtomicBoolean settled = new AtomicBoolean();
+        Runnable timeout = () -> finish(client, settled, callback, "error:timeout");
+        handler.postDelayed(timeout, 3000);
+        try {
+            client.startConnection(new InstallReferrerStateListener() {
+                @Override public void onInstallReferrerSetupFinished(int code) {
+                    if (settled.get()) return;
+                    String value = "error:unavailable";
+                    try {
+                        if (code == InstallReferrerClient.InstallReferrerResponse.OK) {
+                            String raw = client.getInstallReferrer().getInstallReferrer();
+                            value = raw == null || raw.trim().isEmpty() ? "error:empty"
+                                : raw.length() > 4096 ? "error:too_large" : "success:" + raw;
+                        }
+                    } catch (Exception ignored) { }
+                    handler.removeCallbacks(timeout);
+                    finish(client, settled, callback, value);
+                }
+                @Override public void onInstallReferrerServiceDisconnected() {
+                    handler.removeCallbacks(timeout);
+                    finish(client, settled, callback, "error:service_disconnected");
+                }
+            });
+        } catch (Exception ignored) {
+            handler.removeCallbacks(timeout);
+            finish(client, settled, callback, "error:setup_failed");
+        }
+    }
+    private static void finish(InstallReferrerClient client, AtomicBoolean settled,
+            ResponseCallback<String> callback, String value) {
+        if (!settled.compareAndSet(false, true)) return;
+        try { client.endConnection(); } catch (Exception ignored) { }
+        callback.ok(value);
     }
 }

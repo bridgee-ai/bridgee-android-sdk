@@ -339,3 +339,19 @@ Veja [delta implementado, dependências e critérios de aceite](docs/measurement
 ## Entrada com política explícita
 
 `firstOpenWithConsent(bundle, consentGranted, preserveNativeGoogleAttribution, callback)` interrompe a consulta quando não há consentimento (erro `attribution_consent_required`) ou quando Google nativo deve ser preservado (resposta UTM vazia, sem entrega de campanha). O método legado continua disponível. A política deve vir do app/CMP; não é inferida pela origem UTM. Firebase continua dono de first_open/purchase. A mudança está em código fonte para revisão, sem nova versão Maven publicada.
+
+
+## Deferred navigation candidate (unpublished)
+
+`BridgeeSDK.getDeferredDestination(String[] blinklinkPrefixes, String[] appLinkOrigins, ResponseCallback<DeferredDestination>)`
+reads exactly one `bridgee_link` from Google Play Install Referrer, then resolves the
+stored Android App Link through `https://api.bridgee.ai/deferred`. Supply organization-scoped
+HTTPS prefixes ending in `/` and exact verified App Link origins. Invalid/unavailable
+evidence returns `null`; no navigation, `/match`, installation or analytics is emitted.
+The app owns routing readiness, login, path validation and durable consumption **after**
+successful navigation. Persisting consumption is required to avoid repeated launches.
+
+Requires the updated Dashboard/API in the test environment, `BRIDGEE_DEFERRED_ENABLED=true`,
+and a new app build with this source. Native release versions have not been published.
+The Install Referrer connection now has a 3-second timeout, closes on failure and
+settles once. Test real Play installation; local JVM compilation is not Play acceptance.
