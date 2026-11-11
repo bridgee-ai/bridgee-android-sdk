@@ -1,3 +1,5 @@
+> Release preparation: Android 3.0.0 is not published yet. Analytics delivery changes require migration; read [FIRST_OPEN_MIGRATION](docs/FIRST_OPEN_MIGRATION.md) and [release gates](RELEASE_CANDIDATE.md).
+
 # Bridgee Android SDK
 
 [![Maven Central](https://img.shields.io/maven-central/v/ai.bridgee/bridgee-android-sdk)](https://central.sonatype.com/artifact/ai.bridgee/bridgee-android-sdk)
@@ -25,7 +27,7 @@ Adicione a dependência no arquivo `build.gradle` do seu módulo:
 
 ```gradle
 dependencies {
-    implementation 'ai.bridgee:bridgee-android-sdk:2.3.0'
+    implementation 'ai.bridgee:bridgee-android-sdk:3.0.0'
 }
 ```
 
@@ -35,7 +37,7 @@ dependencies {
 <dependency>
     <groupId>ai.bridgee</groupId>
     <artifactId>bridgee-android-sdk</artifactId>
-    <version>2.3.0</version>
+    <version>3.0.0</version>
 </dependency>
 ```
 
