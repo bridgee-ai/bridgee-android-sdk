@@ -15,7 +15,7 @@ Build, test, and publish are driven through `create-bundle.sh`, which wraps Grad
 ```bash
 ./create-bundle.sh build   # clean + assemble; verifies AAR is produced
 ./create-bundle.sh local   # build + publishToMavenLocal (~/.m2/repository)
-./create-bundle.sh zip     # build + GPG-sign + bundle ZIP for Maven Central Portal
+./create-bundle.sh zip     # deliberately disabled; see docs/RELEASE_PUBLICATION.md
 ```
 
 Direct Gradle equivalents (use these for tighter loops):
