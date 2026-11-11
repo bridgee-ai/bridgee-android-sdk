@@ -44,6 +44,29 @@ task sourcesJar(type: Jar) {
     from(rootProject.file("LICENSE")) { into "META-INF" }
 }
 
+// Use the actual release compilation classpath (including transformed Android dependencies).
+afterEvaluate {
+    def releaseVariant = android.libraryVariants.find { it.name == 'release' }
+    def releaseDocs = tasks.register('releaseJavadoc', Javadoc) {
+        dependsOn releaseVariant.javaCompileProvider
+        source android.sourceSets.main.java.srcDirs
+        classpath = files(android.bootClasspath) + releaseVariant.javaCompileProvider.get().classpath
+        options.encoding = 'UTF-8'
+        options.charSet = 'UTF-8'
+        options.docEncoding = 'UTF-8'
+        options.addBooleanOption('notimestamp', true)
+        destinationDir = layout.buildDirectory.dir('docs/javadoc/release').get().asFile
+    }
+    def docsJar = tasks.register('javadocJar', Jar) {
+        archiveClassifier.set('javadoc')
+        dependsOn releaseDocs
+        from releaseDocs.map { it.destinationDir }
+        from(rootProject.file('LICENSE')) { into 'META-INF' }
+    }
+    publishing.publications.maven.artifact(tasks.named('sourcesJar'))
+    publishing.publications.maven.artifact(docsJar)
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
@@ -59,6 +82,11 @@ publishing {
                 name = 'Bridgee Android SDK'
                 description = 'Android SDK for Bridgee attribution and analytics'
                 url = 'https://github.com/bridgee-ai/bridgee-android-sdk'
+                scm {
+                    connection = 'scm:git:https://github.com/bridgee-ai/bridgee-android-sdk.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/bridgee-ai/bridgee-android-sdk.git'
+                    url = 'https://github.com/bridgee-ai/bridgee-android-sdk'
+                }
                 
                 licenses {
                     license {
