@@ -21,13 +21,15 @@ jobs:
         with:
           gradle-version: '8.2'
       # O repositório ainda não distribui gradle-wrapper.jar.
-      - run: gradle :bridgeesdk:testDebugUnitTest :bridgeesdk:assembleRelease
+      - name: Build and stage unsigned Maven artifacts locally
+        run: gradle :bridgeesdk:testDebugUnitTest :bridgeesdk:publishToMavenLocal -Dmaven.repo.local="$PWD/build/maven-local"
+      - run: python3 tests/test_maven_artifacts.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: blink-deferred-android-candidate
           path: |
-            bridgeesdk/build/outputs/aar/bridgeesdk-release.aar
+            build/maven-local/ai/bridgee/bridgee-android-sdk/*/*
             bridgeesdk/build/test-results/testDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 7

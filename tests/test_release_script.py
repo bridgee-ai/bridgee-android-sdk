@@ -12,5 +12,6 @@ class ReleaseSafety(unittest.TestCase):
         self.assertNotIn("--gen-key", source)
         self.assertNotIn("<project", source)
         self.assertIn(":bridgeesdk:sourcesJar", source)
+        self.assertIn(":bridgeesdk:javadocJar", source)
         self.assertIn(":bridgeesdk:generatePomFileForMavenPublication", source)
 if __name__ == "__main__": unittest.main()

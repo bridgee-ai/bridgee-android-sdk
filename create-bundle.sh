@@ -13,7 +13,7 @@ esac
 cd "$(dirname "$0")"
 # Optional path to an existing, approved Gradle executable; never evaluated as shell code.
 GRADLE=${GRADLE_COMMAND:-./gradlew}
-"$GRADLE" :bridgeesdk:testDebugUnitTest :bridgeesdk:assembleRelease :bridgeesdk:sourcesJar :bridgeesdk:generatePomFileForMavenPublication
+"$GRADLE" :bridgeesdk:testDebugUnitTest :bridgeesdk:assembleRelease :bridgeesdk:sourcesJar :bridgeesdk:javadocJar :bridgeesdk:generatePomFileForMavenPublication
 if [ "$MODE" = local ]; then
   "$GRADLE" :bridgeesdk:publishToMavenLocal
   echo "Published to Maven LOCAL only, not Maven Central."
